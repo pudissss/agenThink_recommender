@@ -1,0 +1,16 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Data & Database
+*.db
+*.csv
+*.pkl
+
+# Secrets
+.env
+
+# IDE files
+.vscode/
+.idea/
