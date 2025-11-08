@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hybrid Recommender — Dark Gray (Final)</title>
+  <style>
+    :root{
+      --bg:#0b0b0b;
+      --panel:#121212;
+      --muted:#9ca3af;
+      --accent:#9ca3af;
+      --card:#1a1a1a;
+      --text:#f3f4f6;
+      --card-min:200px;
+      --card-max:360px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#0a0a0a 0%, #1a1a1a 100%);color:var(--text)}
+    .app{display:flex;flex-direction:column;height:100vh;gap:12px;padding:20px;box-sizing:border-box}
+
+    header{display:flex;align-items:center;justify-content:space-between}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#374151,#111827);display:flex;align-items:center;justify-content:center;font-weight:700;color:#e5e7eb}
+    h1{font-size:18px;margin:0} p.subtitle{margin:0;color:var(--muted);font-size:13px}
+
+    .dev-toggle{background:#1f2937;color:#e5e7eb;border:1px solid #333;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+    .dev-toggle:hover{background:#374151}
+
+    .main{display:flex;gap:20px;flex:1;min-height:0}
+    .left{flex:1.1;display:flex;flex-direction:column;gap:12px;min-width:300px;max-width:980px;min-height:0}
+
+    /* Messages + cards inside the feed */
+    .feed{flex:1;background:#111111;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;border:1px solid #1e1e1e;box-shadow:0 6px 20px rgba(0,0,0,0.6);min-height:0}
+    .messages{overflow:auto;padding-right:8px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+    .msg{max-width:78%;padding:10px 12px;border-radius:12px;font-size:14px;line-height:1.35}
+    .msg.user{align-self:flex-end;background:linear-gradient(180deg,#1f2937,#111827);border:1px solid #27272a;color:#f9fafb;border-bottom-right-radius:4px}
+    .msg.assistant{align-self:flex-start;background:linear-gradient(180deg,#171717,#101010);border:1px solid #27272a;color:#e5e7eb;border-bottom-left-radius:4px}
+
+    /* The special assistant message that contains cards */
+    .cards-message { width:100%; padding:8px; border-radius:10px; background:transparent; box-sizing:border-box; }
+    .cards-row{
+      display:flex; flex-wrap:nowrap; gap:12px; overflow-x:auto; padding:8px 6px; scroll-behavior:smooth;
+      align-items:flex-start;
+      box-sizing:border-box;
+    }
+    .mini-card{
+      flex:0 0 260px; min-width:180px; max-width:360px;
+      background:var(--card); border-radius:12px; padding:12px; border:1px solid #262626; box-shadow:0 4px 16px rgba(0,0,0,0.35);
+      display:flex; flex-direction:column; justify-content:space-between;
+    }
+    .mini-card .title{font-weight:600;font-size:14px;margin-bottom:6px;color:var(--text)}
+    .mini-card .price{font-weight:700;color:#d1d5db;margin-bottom:6px}
+    .mini-card .why{font-size:13px;color:var(--muted);min-height:36px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis}
+    .mini-card .actions{display:flex;gap:8px;margin-top:8px}
+    .btn{border:0;padding:8px 10px;border-radius:10px;font-size:13px;cursor:pointer;background:#1f2937;color:var(--text)}
+    .btn.primary{background:#4b5563;color:#f9fafb;font-weight:600}
+    .btn.ghost{background:#111827;border:1px solid #1f2937;color:#9ca3af}
+
+    .right{flex:0.55;min-width:320px;display:flex;flex-direction:column;gap:12px;min-height:0}
+    .panel{background:#111111;padding:12px;border-radius:12px;border:1px solid #1f1f1f;box-shadow:0 8px 20px rgba(0,0,0,0.45);color:var(--text);overflow:auto;min-height:0}
+
+    .footer{position:sticky;bottom:0;display:flex;gap:12px;align-items:center;margin-top:auto}
+    .chatbox{flex:1;display:flex;gap:8px;align-items:center;background:#1a1a1a;padding:10px;border-radius:14px;border:1px solid #262626}
+    .chatbox input[type="text"]{flex:1;background:transparent;border:0;color:#f3f4f6;outline:none;font-size:14px}
+    .send{width:110px;height:40px;border-radius:10px;border:0;background:#4b5563;color:#f9fafb;font-weight:700;cursor:pointer}
+    .send:hover{background:#6b7280}
+
+    .floating-btn{position:fixed;right:30px;bottom:80px;background:#4b5563;color:#fff;padding:12px 20px;border-radius:30px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.5);cursor:pointer;border:none;z-index:999;display:none}
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);display:flex;justify-content:center;align-items:center;z-index:1000}
+    .modal.hidden{display:none}
+    .modal-content{background:#1a1a1a;border:1px solid #2e2e2e;border-radius:16px;padding:20px;max-width:560px;width:90%;color:#f3f4f6;box-shadow:0 8px 25px rgba(0,0,0,0.7);position:relative}
+    .close-btn{background:transparent;border:0;color:#9ca3af;font-size:22px;position:absolute;right:20px;top:14px;cursor:pointer}
+    .close-btn:hover{color:#f3f4f6}
+
+    .diag{font-family:monospace;font-size:13px;color:#e6eef7;background:#0f1112;padding:10px;border-radius:8px;border:1px solid #232426;white-space:pre-wrap;overflow:auto;max-height:320px}
+
+    .instructions{background:#111111;color:#e5e7eb;border-radius:12px;padding:16px;border:1px solid #1f1f1f;box-shadow:0 8px 20px rgba(0,0,0,0.45);font-size:14px;line-height:1.5}
+    .instructions h3{margin-top:0;color:#9ca3af}
+
+    @media (max-width:1000px){
+      .right{display:none}
+      .mini-card{flex-basis:80%}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="logo">H</div>
+        <div>
+          <h1>Hybrid Recommender</h1>
+          <p class="subtitle">Hybrid search — keyword + semantic + LLM explanations</p>
+        </div>
+      </div>
+      <button class="dev-toggle" id="devToggle">Dev Mode</button>
+    </header>
+
+    <div class="main">
+      <div class="left">
+        <div class="feed">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="meta">Chat</div>
+            <div id="status" class="small muted">Idle</div>
+          </div>
+
+          <!-- messages container: cards will be inserted as a message inside here -->
+          <div id="messages" class="messages" role="log" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div id="instructionPanel" class="instructions">
+          <h3>How It Works</h3>
+          <p>This system uses a hybrid AI search approach combining:</p>
+          <ul>
+            <li><b>Keyword Search</b> — Finds textual matches fast.</li>
+            <li><b>Semantic Search</b> — Understands the meaning of your query.</li>
+            <li><b>LLM Explanation</b> — Uses Gemini to explain & re-rank products.</li>
+          </ul>
+          <h3>How to Use</h3>
+          <ul>
+            <li>Type your first product query (e.g., "wireless headphones for running").</li>
+            <li>View top recommendations above (they appear in the chat feed).</li>
+            <li>Ask follow-up questions like "show me cheaper ones" or "more options".</li>
+            <li>Click Dev Mode for API logs and latency.</li>
+          </ul>
+        </div>
+
+        <div id="devPanel" class="panel" style="display:none">
+          <h3>Developer Diagnostics</h3>
+          <div><b>API Base:</b> <span id="apiBase">http://127.0.0.1:8000</span></div>
+          <div><b>Last Endpoint:</b> <span id="lastEndpoint">—</span></div>
+          <div><b>Status:</b> <span id="lastStatus">—</span></div>
+          <div><b>Latency:</b> <span id="lastLatency">—</span></div>
+          <h4>Request</h4>
+          <div id="lastPayload" class="diag"></div>
+          <h4>Response</h4>
+          <div id="lastResponse" class="diag"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="chatbox">
+        <input id="queryInput" type="text" placeholder="Ask (e.g. 'wireless headphones for running') or follow up..." />
+        <button id="sendBtn" class="send">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="floating-btn" id="cheaperBtn">Show Cheaper Options</button>
+
+  <div id="detailsModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="close-btn" id="closeModalBtn">×</button>
+      <h2 id="detailsTitle"></h2>
+      <p id="detailsWhy" class="why"></p>
+      <p id="detailsDesc" class="desc"></p>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+    let history = [], top10cache = [], devMode = false;
+
+    const messagesEl = document.getElementById('messages');
+    const statusEl = document.getElementById('status');
+    const queryInput = document.getElementById('queryInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const devToggle = document.getElementById('devToggle');
+    const devPanel = document.getElementById('devPanel');
+    const instructionPanel = document.getElementById('instructionPanel');
+    const apiBaseEl = document.getElementById('apiBase');
+    const lastEndpoint = document.getElementById('lastEndpoint');
+    const lastStatus = document.getElementById('lastStatus');
+    const lastPayload = document.getElementById('lastPayload');
+    const lastResponse = document.getElementById('lastResponse');
+    const lastLatency = document.getElementById('lastLatency');
+    const cheaperBtn = document.getElementById('cheaperBtn');
+    const detailsModal = document.getElementById('detailsModal');
+    const detailsTitle = document.getElementById('detailsTitle');
+    const detailsWhy = document.getElementById('detailsWhy');
+    const detailsDesc = document.getElementById('detailsDesc');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    apiBaseEl.textContent = API_BASE;
+
+    function setStatus(text, busy=false){
+      statusEl.textContent = text;
+      sendBtn.disabled = busy;
+      sendBtn.style.opacity = busy ? 0.6 : 1;
+    }
+
+    function escapeHtml(t){ return (''+t).replace(/[&<"'>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+    function formatPrice(v){ return (!v || Number(v) === 0) ? '—' : Number(v).toFixed(2); }
+
+    function pushDiagnostics(endpoint, status, payload, response, latency){
+      lastEndpoint.textContent = endpoint;
+      lastStatus.textContent = status;
+      lastPayload.textContent = JSON.stringify(payload, null, 2);
+      lastResponse.textContent = (typeof response === 'string') ? response : JSON.stringify(response, null, 2);
+      lastLatency.textContent = latency + ' ms';
+    }
+
+    function renderUserMessage(text){
+      const node = document.createElement('div');
+      node.className = 'msg user';
+      node.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">You</div><div>${escapeHtml(text)}</div>`;
+      messagesEl.appendChild(node);
+      scrollToBottom();
+    }
+
+    function renderAssistantText(text){
+      const node = document.createElement('div');
+      node.className = 'msg assistant';
+      node.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Assistant</div><div>${escapeHtml(text)}</div>`;
+      messagesEl.appendChild(node);
+      scrollToBottom();
+    }
+
+    // Insert or update the cards *as a single assistant message* at the top of the chat
+    function renderCardsInChat(items){
+      // remove existing cards message if present
+      const existing = document.querySelector('.cards-message');
+      if(existing) existing.remove();
+
+      const container = document.createElement('div');
+      container.className = 'cards-message';
+
+      // create assistant header wrapper to match visual language
+      const header = document.createElement('div');
+      header.className = 'msg assistant';
+      header.style.padding = '8px';
+      header.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Assistant</div>`;
+      container.appendChild(header);
+
+      const cardsRow = document.createElement('div');
+      cardsRow.className = 'cards-row';
+
+      if(!items || !items.length){
+        const empty = document.createElement('div');
+        empty.style.padding = '12px';
+        empty.style.color = 'var(--muted)';
+        empty.textContent = 'No recommendations yet.';
+        cardsRow.appendChild(empty);
+      } else {
+        items.slice(0,5).forEach((p, idx) => {
+          const c = document.createElement('div');
+          c.className = 'mini-card';
+          c.innerHTML = `
+            <div>
+              <div class="title">${escapeHtml(p.name || 'Untitled')}</div>
+              <div class="price">$ ${formatPrice(p.price)}</div>
+              <div class="why">${escapeHtml((p.why_match || p.synthetic_description || '').replace(/\*\*/g,''))}</div>
+            </div>
+            <div class="actions">
+              <button class="btn primary" data-action="more" data-idx="${idx}">More</button>
+              <button class="btn ghost" data-action="details" data-idx="${idx}">Details</button>
+            </div>
+          `;
+          cardsRow.appendChild(c);
+        });
+      }
+
+      container.appendChild(cardsRow);
+
+      // insert cards message as the first element in messages so it scrolls with chat
+      messagesEl.insertBefore(container, messagesEl.firstChild);
+      // keep scroll pinned to bottom to show new chat activity
+      scrollToBottom();
+    }
+
+    function scrollToBottom(){
+      // small delay to let DOM layout update
+      requestAnimationFrame(() => {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      });
+    }
+
+    async function safeFetch(endpoint, payload){
+      const url = API_BASE + endpoint;
+      const start = performance.now();
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const latency = Math.round(performance.now() - start);
+        const text = await resp.text();
+        let parsed = text;
+        try { parsed = JSON.parse(text); } catch {}
+        pushDiagnostics(endpoint, resp.status, payload, parsed, latency);
+        if(!resp.ok) throw new Error(`HTTP ${resp.status}: ${text}`);
+        return parsed;
+      } catch (err) {
+        const latency = Math.round(performance.now() - start);
+        pushDiagnostics(endpoint, 'NETWORK_ERROR', payload, String(err), latency);
+        throw err;
+      }
+    }
+
+    async function doInitialSearch(query){
+      setStatus('Searching...', true);
+      renderUserMessage(query);
+      try {
+        const data = await safeFetch('/recommend', { query });
+        history = data.history || [{ query, response: 'Here are my top recommendations for you:' }];
+        top10cache = data.top_10_cache || data.recommendations || [];
+        // render cards as a message inside chat
+        renderCardsInChat(top10cache);
+        renderAssistantText(data.text_response || history.at(-1)?.response || 'Here are my top recommendations for you:');
+        if(top10cache.length) cheaperBtn.style.display = 'block';
+        setStatus('Ready', false);
+      } catch (err) {
+        renderAssistantText('Server error: ' + err.message);
+        setStatus('Error', false);
+      }
+    }
+
+    async function handleSend(){
+      const q = queryInput.value.trim();
+      if(!q) return;
+      if(!top10cache.length){
+        await doInitialSearch(q);
+        queryInput.value = '';
+        return;
+      }
+
+      renderUserMessage(q);
+      setStatus('Thinking...', true);
+      try {
+        const data = await safeFetch('/followup', { new_query: q, history, top_10_cache: top10cache });
+        if(Array.isArray(data.history) && data.history.length) history = data.history;
+        else history.push({ query: q, response: data.text_response || (data.recommendations && data.recommendations.length ? 'Here are some recommendations.' : 'Okay.') });
+
+        if(Array.isArray(data.recommendations) && data.recommendations.length){
+          top10cache = data.top_10_cache || data.recommendations;
+          renderCardsInChat(top10cache);
+        }
+        renderAssistantText(data.text_response || history.at(-1)?.response || 'Done.');
+        cheaperBtn.style.display = 'none';
+        setStatus('Ready', false);
+        queryInput.value = '';
+      } catch (err) {
+        renderAssistantText('Server error: ' + err.message);
+        setStatus('Error', false);
+      }
+    }
+
+    async function askCheaper(){
+      if(!top10cache.length){ renderAssistantText('Ask something first.'); return; }
+      cheaperBtn.style.display = 'none';
+      queryInput.value = 'show me some cheaper ones';
+      await handleSend();
+    }
+
+    async function onCardAction(kind, idx){
+      const p = top10cache[idx];
+      if(!p) return;
+      if(kind === 'more'){
+        queryInput.value = 'show me more options';
+        await handleSend();
+      } else if(kind === 'details'){
+        detailsTitle.textContent = p.name || 'Untitled';
+        detailsWhy.textContent = (p.why_match || p.synthetic_description || '').replace(/\*\*/g,'');
+        detailsDesc.textContent = p.synthetic_description || 'No description available.';
+        detailsModal.classList.remove('hidden');
+      }
+    }
+
+    // delegate clicks inside messages (so card buttons work)
+    messagesEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if(!btn) return;
+      const action = btn.dataset.action;
+      const idx = Number(btn.dataset.idx);
+      onCardAction(action, idx);
+    });
+
+    closeModalBtn.addEventListener('click', () => detailsModal.classList.add('hidden'));
+    detailsModal.addEventListener('click', (e) => { if(e.target === detailsModal) detailsModal.classList.add('hidden'); });
+
+    devToggle.addEventListener('click', () => {
+      devMode = !devMode;
+      devPanel.style.display = devMode ? 'block' : 'none';
+      instructionPanel.style.display = devMode ? 'none' : 'block';
+    });
+
+    sendBtn.addEventListener('click', handleSend);
+    cheaperBtn.addEventListener('click', askCheaper);
+
+    queryInput.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        handleSend();
+      }
+    });
+
+    // initial: show empty cards message so layout is clear
+    renderCardsInChat([]);
+  </script>
+</body>
+</html>
